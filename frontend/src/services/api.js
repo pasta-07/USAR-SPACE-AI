@@ -8,11 +8,22 @@ const request = async (path, options = {}) => {
   try {
     response = await fetch(url, options);
   } catch (error) {
+    console.error(`API request failed: ${url}`, error);
     throw new Error(`API request failed for ${url}: ${error.message}`);
   }
 
   if (!response.ok) {
+    console.error(`API responded with ${response.status}: ${url}`);
     throw new Error(`API error: ${response.status} ${response.statusText} (${url})`);
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    console.error(`API returned a non-JSON response: ${url}`, {
+      status: response.status,
+      contentType
+    });
+    throw new Error(`API returned non-JSON content for ${url} (status ${response.status})`);
   }
 
   return response.json();

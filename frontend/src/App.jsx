@@ -53,7 +53,7 @@ export default function App() {
       });
       setOverviewData(data);
     } catch (err) {
-      console.error('Failed to fetch availability overview:', err);
+      console.error('Failed to fetch classroom availability overview:', err);
     } finally {
       if (!isBackground) setLoading(false);
     }
