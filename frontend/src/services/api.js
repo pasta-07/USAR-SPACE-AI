@@ -1,4 +1,22 @@
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '') + '/api';
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+).replace(/\/$/, '');
+
+const request = async (path, options = {}) => {
+  const url = `${API_BASE_URL}${path}`;
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    throw new Error(`API request failed for ${url}: ${error.message}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText} (${url})`);
+  }
+
+  return response.json();
+};
 
 export const api = {
   // Live Availability
@@ -10,9 +28,7 @@ export const api = {
     if (params.floor !== undefined && params.floor !== null && params.floor !== '') query.append('floor', params.floor);
     if (params.roomType) query.append('room_type', params.roomType);
 
-    const res = await fetch(`${API_BASE}/classrooms/available-now?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch classroom availability');
-    return res.json();
+    return request(`/api/classrooms/available-now?${query.toString()}`);
   },
 
   // Single Classroom Status
@@ -21,16 +37,12 @@ export const api = {
     if (params.simulatedTime) query.append('simulated_time', params.simulatedTime);
     if (params.simulatedDay) query.append('simulated_day', params.simulatedDay);
 
-    const res = await fetch(`${API_BASE}/classrooms/${classroomId}/status?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch classroom status');
-    return res.json();
+    return request(`/api/classrooms/${classroomId}/status?${query.toString()}`);
   },
 
   // Single Classroom Weekly Schedule
   getClassroomSchedule: async (classroomId) => {
-    const res = await fetch(`${API_BASE}/classrooms/${classroomId}/schedule`);
-    if (!res.ok) throw new Error('Failed to fetch classroom schedule');
-    return res.json();
+    return request(`/api/classrooms/${classroomId}/schedule`);
   },
 
   // Search Classrooms
@@ -47,137 +59,89 @@ export const api = {
     if (params.simulatedTime) query.append('simulated_time', params.simulatedTime);
     if (params.simulatedDay) query.append('simulated_day', params.simulatedDay);
 
-    const res = await fetch(`${API_BASE}/classrooms/search?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to search classrooms');
-    return res.json();
+    return request(`/api/classrooms/search?${query.toString()}`);
   },
 
   // Buildings and Map
   getBuildings: async () => {
-    const res = await fetch(`${API_BASE}/buildings`);
-    if (!res.ok) throw new Error('Failed to fetch buildings');
-    return res.json();
+    return request('/api/buildings');
   },
 
-  getFloorMap: async (buildingCode, floor, params = {}) => {
+  getBuildingClassrooms: async (buildingId, params = {}) => {
     const query = new URLSearchParams();
     if (params.simulatedTime) query.append('simulated_time', params.simulatedTime);
     if (params.simulatedDay) query.append('simulated_day', params.simulatedDay);
 
-    const res = await fetch(`${API_BASE}/buildings/${buildingCode}/floors/${floor}/map?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch floor map');
-    return res.json();
+    return request(`/api/buildings/${buildingId}/classrooms?${query.toString()}`);
   },
 
   // Timetables & Analytics
-  getDepartments: async () => {
-    const res = await fetch(`${API_BASE}/departments`);
-    if (!res.ok) throw new Error('Failed to fetch departments');
-    return res.json();
-  },
-
-  getSectionTimetable: async (departmentCode, semester, section) => {
-    const query = new URLSearchParams({
-      department_code: departmentCode,
-      semester,
-      section
-    });
-    const res = await fetch(`${API_BASE}/timetables/section?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch section timetable');
-    return res.json();
-  },
-
-  getFacultyTimetable: async (facultyName) => {
-    const res = await fetch(`${API_BASE}/timetables/faculty/${encodeURIComponent(facultyName)}`);
-    if (!res.ok) throw new Error('Failed to fetch faculty timetable');
-    return res.json();
-  },
-
-  getFacultyList: async () => {
-    const res = await fetch(`${API_BASE}/faculty`);
-    if (!res.ok) throw new Error('Failed to fetch faculty list');
-    return res.json();
-  },
-
-  getCampusAnalytics: async () => {
-    const res = await fetch(`${API_BASE}/analytics/overview`);
-    if (!res.ok) throw new Error('Failed to fetch analytics');
-    return res.json();
+  getCampusStats: async () => {
+    return request('/api/stats/overview');
   },
 
   // Admin & PDF Upload
-  uploadTimetablePdf: async (file, academicYear = '2026-27') => {
+  uploadTimetable: async (file, academicYear = '2026-27') => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('academic_year', academicYear);
 
-    const res = await fetch(`${API_BASE}/admin/upload-pdf`, {
+    return request('/api/admin/upload-timetable', {
       method: 'POST',
       body: formData
     });
-    if (!res.ok) throw new Error('Failed to upload and parse PDF timetable');
-    return res.json();
   },
 
-  getUploadStatus: async (uploadId) => {
-    const res = await fetch(`${API_BASE}/admin/uploads/${uploadId}/status`);
-    if (!res.ok) throw new Error('Failed to fetch upload status');
-    return res.json();
-  },
-
-  getUploadReview: async (uploadId) => {
-    const res = await fetch(`${API_BASE}/admin/uploads/${uploadId}/review`);
-    if (!res.ok) throw new Error('Failed to fetch upload review data');
-    return res.json();
+  getTimetableReview: async (uploadId) => {
+    return request(`/api/admin/timetable-review/${uploadId}`);
   },
 
   approveUpload: async (uploadId) => {
-    const res = await fetch(`${API_BASE}/admin/uploads/${uploadId}/approve`, {
+    return request(`/api/admin/approve-upload/${uploadId}`, {
       method: 'POST'
     });
-    if (!res.ok) throw new Error('Failed to approve upload');
-    return res.json();
   },
 
   // Conflict Center
   getConflicts: async () => {
-    const res = await fetch(`${API_BASE}/conflicts`);
-    if (!res.ok) throw new Error('Failed to fetch conflicts');
-    return res.json();
+    return request('/api/admin/conflicts');
   },
 
   resolveConflict: async (conflictId, notes) => {
-    const res = await fetch(`${API_BASE}/conflicts/${conflictId}/resolve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ resolution_notes: notes })
+    const query = new URLSearchParams({ notes });
+    return request(`/api/admin/conflicts/${conflictId}/resolve?${query.toString()}`, {
+      method: 'POST'
     });
-    if (!res.ok) throw new Error('Failed to resolve conflict');
-    return res.json();
   },
 
   // Exceptions
-  getExceptions: async (activeOnly = false) => {
-    const res = await fetch(`${API_BASE}/exceptions?active_only=${activeOnly}`);
-    if (!res.ok) throw new Error('Failed to fetch exceptions');
-    return res.json();
+  getExceptions: async () => {
+    return request('/api/admin/exceptions');
   },
 
   createException: async (data) => {
-    const res = await fetch(`${API_BASE}/exceptions`, {
+    return request('/api/admin/exceptions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('Failed to create timetable exception');
-    return res.json();
   },
 
   deleteException: async (exceptionId) => {
-    const res = await fetch(`${API_BASE}/exceptions/${exceptionId}`, {
+    return request(`/api/admin/exceptions/${exceptionId}`, {
       method: 'DELETE'
     });
-    if (!res.ok) throw new Error('Failed to delete exception');
-    return res.json();
+  },
+
+  deleteTimetableEntry: async (entryId) => {
+    return request(`/api/admin/timetable-entries/${entryId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  resetDatabase: async () => {
+    return request('/api/seed/reset', {
+      method: 'POST'
+    });
   }
 };

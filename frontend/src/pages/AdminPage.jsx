@@ -101,12 +101,8 @@ export default function AdminPage({ onRefreshAvailability }) {
     const timer2 = setTimeout(() => setUploadProgressStep(3), 800);
     const timer3 = setTimeout(() => setUploadProgressStep(4), 1200);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('academic_year', '2026-27');
-
     try {
-      const res = await api.uploadTimetable(formData);
+      const res = await api.uploadTimetable(file);
       setUploadProgressStep(7);
       setUploadResult(res);
       setReviewUploadId(res.upload_id);
